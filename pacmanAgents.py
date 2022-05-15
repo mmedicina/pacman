@@ -49,5 +49,16 @@ class GreedyAgent(Agent):
         bestActions = [pair[1] for pair in scored if pair[0] == bestScore]
         return random.choice(bestActions)
 
+class ReinforcementLearningAgent(Agent):
+    def __init__(self, **args):
+        super()
+        self.alpha = 0.1
+        self.gamma=0.4
+    def get_action(self, state):
+        return state 
+    def q_value(self, state, action):
+        return action
+    def reward(self, state, next_state, features):
+        return next_state
 def scoreEvaluation(state):
     return state.getScore()

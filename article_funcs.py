@@ -2,6 +2,7 @@ from util import *
 from game import *
 from pacman import * 
 from random import choice 
+
 def distToNextPill(state, pos):
     if state.getNumFood() == 0: 
         return -1, -1 
