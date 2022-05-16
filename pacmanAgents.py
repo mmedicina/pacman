@@ -54,11 +54,29 @@ class ReinforcementLearningAgent(Agent):
         super()
         self.alpha = 0.1
         self.gamma=0.4
-    def get_action(self, state):
+        self.weights={}
+
+    def get_Action(self, state):
+
         return state 
+
     def q_value(self, state, action):
-        return action
+        env_states = self.get_env_states(state)
+        q=0
+        for name, value in env_states.items():
+            q = q + (value*self.weights[name])
+        return q, env_states
+
+    def get_env_states(self,state):
+        return state
+
     def reward(self, state, next_state, features):
+
         return next_state
+
+    def update_game(self,state):
+        return self.weights
+        #atualiza os pesos
+        
 def scoreEvaluation(state):
     return state.getScore()
