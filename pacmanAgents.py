@@ -16,7 +16,9 @@ from pacman import Directions
 from game import Agent
 import random
 import game
+from pacman.pacman import GameState
 import util
+import numpy as np
 
 class LeftTurnAgent(game.Agent):
     "An agent that turns left at every opportunity"
@@ -50,33 +52,56 @@ class GreedyAgent(Agent):
         return random.choice(bestActions)
 
 class ReinforcementLearningAgent(Agent):
-    def __init__(self, **args):
+
+    def __init__(self, discount = 0.1, learning_rate=0.4):
+        import article_funcs as af
+
         super()
-        self.alpha = 0.1
-        self.gamma=0.4
-        self.weights={}
+        self.discount = discount
+        self.learning_rate = learning_rate
+        self.features = (af.distToNextPill, af.distToNextPowerPill)
+        self.weights = dict(zip(self.features, np.random.rand(len(self.features))))
+        self.weights["bias"] = np.random.rand()
 
-    def get_Action(self, state):
+    def reward(self, state:GameState, next_state:GameState):
+        eaten = any(state.getFood() - next_state.getFood())        # Verifica se o pacman comeu
+        power = state.getCapsules() != next_state.getCapsules()    # Verifica se o pacman comeu uma power pill
+        score = next_state.getScore() - state.getScore()           # Leva em conta a mudança do score
+        freedom = next_state.getLegalPacmanActions() - state.getLegalPacmanActions()    # Incentiva ir para lugares mais livres
 
-        return state 
+        return 1*eaten + 5*power + score + 0.5*freedom
 
     def q_value(self, state, action):
-        env_states = self.get_env_states(state)
-        q=0
-        for name, value in env_states.items():
+        q = self.weights["bias"]
+
+        for name, value in self.features.items():
             q = q + (value*self.weights[name])
-        return q, env_states
 
-    def get_env_states(self,state):
-        return state
+        return q
 
-    def reward(self, state, next_state, features):
+    def update_weights(self, reward, best, current, state, action):
 
-        return next_state
+        experience = self.learning_rate * (reward + self.discount * best - current)
 
-    def update_game(self,state):
-        return self.weights
-        #atualiza os pesos
+        for feature in self.features:
+            self.weights[feature] += experience * feature(state, action)
+
+    def getAction(self, state):
+
+        legal = state.getLegalPacmanActions()
+
+        if Directions.STOP in legal: legal.remove(Directions.STOP)
+
+        successors = [(state.generateSuccessor(0, action), action) for action in legal]
+        scored = [(self.q_value(state), action) for state, action in successors]
+        bestScore = max(scored)[0]
+        bestActions = [successors[i] for i in range(len(scored)) if scored[i][0] == bestScore]
+
+        choose = random.choice(bestActions)
+
+        self.update_weights(self.reward(state, choose[0]), bestScore, self.q_value(state, choose[1]))
+
+        return choose[1]
         
 def scoreEvaluation(state):
     return state.getScore()

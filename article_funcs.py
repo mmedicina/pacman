@@ -1,45 +1,52 @@
-from util import *
-from game import *
-from pacman import * 
-from random import choice 
+from pacman.pacman import GameState
+import util
 
-def distToNextPill(state, pos):
-    if state.getNumFood() == 0: 
+def distToNextPill(state:GameState, action):
+    n_state = state.generateSuccessor(0, action)
+
+    pos = n_state.getPacmanPosition()
+
+    if n_state.getNumFood() == 0: 
         return -1, -1 
     else:
         next_min = 1000000
-        list_food = state.getFood()
+        list_food = n_state.getFood()
         for i, j in enumerate(list_food):
             for ii, jj in enumerate(j):
-                dst = manhattanDistance(pos,(i,jj))
+                dst = util.manhattanDistance(pos,(i,jj))
                 if (ii and dst) < next_min:
                     next_min = dst
                     x = i
                     y = jj
-        return dst, x, y
+        return dst
 
-def distToNextPowerPill(state, pos):
+def distToNextPowerPill(state:GameState, action):
+    n_state = state.generateSuccessor(0, action)
+
+    pos = n_state.getPacmanPosition()
     min_pos = 1000000
-    power_pill = state.getCapsules()
+    power_pill = n_state.getCapsules()
     if len(power_pill) < 1:
         return -1,-1,-1
     else:
         for pill in power_pill:
-            dst = manhattanDistance(pos, pill)
+            dst = util.manhattanDistance(pos, pill)
             if dst < min_pos:
                 min_pos = dst
                 next_pos = pill
         x, y = next_pos
-        return dst, x, y
+        return dst
 
-def junction(state, pos, dir):
-    x, y = pos
+def junction(state:GameState, action):
+    n_state = state.generateSuccessor(0, action)
+
+    x, y = n_state.getPacmanPosition()
     coord_x, coord_y = dir
     distToNextJunction = 1  
     if (coord_x == 0 and coord_y == 0): 
         return -1, False 
     ghostBeforeJunction = False
-    ghost = [nearestPoint(pos) for pos in state.getGhostPositions()]
+    ghost = [util.nearestPoint(pos) for pos in state.getGhostPositions()]
     while True:
         state.hasWall(x + distToNextJunction * coord_x, y + distToNextJunction * coord_y)
         if (x + distToNextJunction * coord_x, y + distToNextJunction * coord_y) in ghost: 
@@ -58,11 +65,16 @@ def junction(state, pos, dir):
             n_food.append(position)
         return distToNextJunction, ghostBeforeJunction
 
-def food_or_not(state, pos):
+def food_or_not(state:GameState, action):
+
+    n_state = state.generateSuccessor(0, action)
+
+    pos = n_state.getPacmanPosition()
+
     food = []
     n_food = []
 
-    for ghost_state in state.getGhostStates():
+    for ghost_state in n_state.getGhostStates():
         position = ghost_state.getPosition()
         if ghost_state.scaredTimer > 0:
             food.append(position)
@@ -77,7 +89,7 @@ def food_or_not(state, pos):
         dsts=[]
         min_dist = 100000
         for i in enumerate(food):
-            dist = manhattanDistance(pos, food[i])
+            dist = util.manhattanDistance(pos, food[i])
             dsts.append(dist)
             if dist < min_dist:
                 dist_food = dist 
@@ -86,7 +98,7 @@ def food_or_not(state, pos):
         dsts=[]
         min_dist = 100000
         for i in enumerate(n_food):
-            dist = manhattanDistance(pos, n_food[i])
+            dist = util.manhattanDistance(pos, n_food[i])
             dsts.append(dist)
             if dist < min_dist:
                 dist_nfood = dist 
