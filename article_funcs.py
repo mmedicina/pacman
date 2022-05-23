@@ -1,4 +1,5 @@
-from pacman.pacman import GameState
+from pacman import GameState
+from distanceCalculator import Distancer
 import util
 
 def distToNextPill(state:GameState, action):

@@ -16,7 +16,7 @@ from pacman import Directions
 from game import Agent
 import random
 import game
-from pacman.pacman import GameState
+from pacman import GameState
 import util
 import numpy as np
 
@@ -51,17 +51,19 @@ class GreedyAgent(Agent):
         bestActions = [pair[1] for pair in scored if pair[0] == bestScore]
         return random.choice(bestActions)
 
+import article_funcs as af
 class ReinforcementLearningAgent(Agent):
 
-    def __init__(self, discount = 0.1, learning_rate=0.4):
-        import article_funcs as af
+    def __new__(cls, discount = 0.1, learning_rate=0.4):
 
-        super()
-        self.discount = discount
-        self.learning_rate = learning_rate
-        self.features = (af.distToNextPill, af.distToNextPowerPill)
-        self.weights = dict(zip(self.features, np.random.rand(len(self.features))))
-        self.weights["bias"] = np.random.rand()
+        object = super(ReinforcementLearningAgent, cls).__new__(cls)
+        object.discount = discount
+        object.learning_rate = learning_rate
+        object.features = (af.distToNextPill, af.distToNextPowerPill)
+        object.weights = dict(zip(object.features, np.random.rand(len(object.features))))
+        object.weights["bias"] = np.random.rand()
+
+        return object
 
     def reward(self, state:GameState, next_state:GameState):
         eaten = any(state.getFood() - next_state.getFood())        # Verifica se o pacman comeu
@@ -75,7 +77,7 @@ class ReinforcementLearningAgent(Agent):
         q = self.weights["bias"]
 
         for name, value in self.features.items():
-            q = q + (value*self.weights[name])
+            q = q + (value(state, action)*self.weights[name])
 
         return q
 
