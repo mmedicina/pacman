@@ -12,11 +12,9 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from pacman import Directions
-from game import Agent
+from pacman import Directions, GameState
 import random
 import game
-from pacman import GameState
 import util
 import numpy as np
 
@@ -34,7 +32,7 @@ class LeftTurnAgent(game.Agent):
         if Directions.LEFT[left] in legal: return Directions.LEFT[left]
         return Directions.STOP
 
-class GreedyAgent(Agent):
+class GreedyAgent(game.Agent):
     def __init__(self, evalFn="scoreEvaluation"):
         self.evaluationFunction = util.lookup(evalFn, globals())
         assert self.evaluationFunction != None
@@ -51,59 +49,55 @@ class GreedyAgent(Agent):
         bestActions = [pair[1] for pair in scored if pair[0] == bestScore]
         return random.choice(bestActions)
 
-import article_funcs as af
-class ReinforcementLearningAgent(Agent):
+def scoreEvaluation(state:GameState, action):
+    return state.generateSuccessor(0, action).getScore()
 
-    def __new__(cls, discount = 0.1, learning_rate=0.4):
+
+import article_funcs as af
+class ReinforcementLearningAgent(game.Agent):
+
+    def __new__(cls, discount = 0.1, learning_rate=0.001):
 
         object = super(ReinforcementLearningAgent, cls).__new__(cls)
         object.discount = discount
         object.learning_rate = learning_rate
-        object.features = (af.distToNextPill, af.distToNextPowerPill)
-        object.weights = dict(zip(object.features, np.random.rand(len(object.features))))
-        object.weights["bias"] = np.random.rand()
+        object.features = (scoreEvaluation,)
+        object.weights = np.random.rand(1 + len(object.features))
 
         return object
 
     def reward(self, state:GameState, next_state:GameState):
-        eaten = any(state.getFood() - next_state.getFood())        # Verifica se o pacman comeu
+        eaten = np.bitwise_xor(np.array(state.getFood().data), np.array(next_state.getFood().data)).any()    # Verifica se o pacman comeu
         power = state.getCapsules() != next_state.getCapsules()    # Verifica se o pacman comeu uma power pill
         score = next_state.getScore() - state.getScore()           # Leva em conta a mudança do score
-        freedom = next_state.getLegalPacmanActions() - state.getLegalPacmanActions()    # Incentiva ir para lugares mais livres
+        freedom = len(next_state.getLegalPacmanActions()) - len(state.getLegalPacmanActions())    # Incentiva ir para lugares mais livres
 
-        return 1*eaten + 5*power + score + 0.5*freedom
+        return 0.1*eaten + power + 0.5*freedom
+
+    def feature_vector(self, state, action):
+        return np.array([1] + [feature(state, action ) for feature in self.features])
 
     def q_value(self, state, action):
-        q = self.weights["bias"]
+        return np.inner(self.weights, self.feature_vector(state, action))
 
-        for name, value in self.features.items():
-            q = q + (value(state, action)*self.weights[name])
-
-        return q
-
-    def update_weights(self, reward, best, current, state, action):
-
-        experience = self.learning_rate * (reward + self.discount * best - current)
-
-        for feature in self.features:
-            self.weights[feature] += experience * feature(state, action)
-
-    def getAction(self, state):
+    def getAction(self, state:GameState):
 
         legal = state.getLegalPacmanActions()
 
         if Directions.STOP in legal: legal.remove(Directions.STOP)
 
-        successors = [(state.generateSuccessor(0, action), action) for action in legal]
-        scored = [(self.q_value(state), action) for state, action in successors]
-        bestScore = max(scored)[0]
-        bestActions = [successors[i] for i in range(len(scored)) if scored[i][0] == bestScore]
+        Qvalues = [self.q_value(state, action) for action in legal]
 
-        choose = random.choice(bestActions)
+        best = random.choice(np.flatnonzero(Qvalues == np.max(Qvalues)))
 
-        self.update_weights(self.reward(state, choose[0]), bestScore, self.q_value(state, choose[1]))
+        bestAction = legal[best]
 
-        return choose[1]
-        
-def scoreEvaluation(state):
-    return state.getScore()
+        successor = state.generateSuccessor(0, bestAction)
+
+        Qmax = max([self.q_value(successor, move) for move in successor.getLegalPacmanActions()])
+
+        #self.weights += self.learning_rate * (self.reward(state, successor) + self.discount * Qmax - Qvalues[best]) * self.feature_vector(state, bestAction)
+
+        print(self.feature_vector(state, bestAction))
+
+        return bestAction
