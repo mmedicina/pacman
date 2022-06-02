@@ -8,7 +8,7 @@ def distToNextPill(state:GameState, action):
     pos = n_state.getPacmanPosition()
 
     if n_state.getNumFood() == 0: 
-        return -1, -1 
+        return 0, 0
     else:
         next_min = 1000000
         list_food = n_state.getFood()
@@ -17,10 +17,11 @@ def distToNextPill(state:GameState, action):
                 dst = util.manhattanDistance(pos,(i,jj))
                 if (ii and dst) < next_min:
                     next_min = dst
-                    x = i
-                    y = jj
-        return dst
 
+        return norm_dist(state,next_min), len(list_food)
+def norm_dist(state:GameState,dist):
+    size_map = state.getWalls().width * state.getWalls().height
+    return dist/size_map
 def distToNextPowerPill(state:GameState, action):
     n_state = state.generateSuccessor(0, action)
 
@@ -28,15 +29,14 @@ def distToNextPowerPill(state:GameState, action):
     min_pos = 1000000
     power_pill = n_state.getCapsules()
     if len(power_pill) < 1:
-        return -1,-1,-1
+        return 0,0
     else:
         for pill in power_pill:
             dst = util.manhattanDistance(pos, pill)
             if dst < min_pos:
                 min_pos = dst
-                next_pos = pill
-        x, y = next_pos
-        return dst
+                #next_pos = pill
+        return min_pos,norm_dist(state,min_pos)
 
 def junction(state:GameState, action):
     n_state = state.generateSuccessor(0, action)
@@ -104,5 +104,5 @@ def food_or_not(state:GameState, action):
             if dist < min_dist:
                 dist_nfood = dist 
                 n_foodX, n_foodY = n_food[i]
-    return len(food), food_X, food_Y, dist_food, len(n_food), n_foodX, n_foodY, dist_nfood
+    return len(food), norm_dist(state,dist_food), len(n_food), norm_dist(state,dist_nfood)
 
