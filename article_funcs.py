@@ -1,42 +1,46 @@
-from pacman import GameState
+from pacman import GameState, Actions
 from distanceCalculator import Distancer
 import util
-
+def distancer(state:GameState):
+    distance_calculator = Distancer(state.data.layout)
+    distance_calculator.getMazeDistances()
+    return distance_calculator
 def distToNextPill(state:GameState, action):
-    n_state = state.generateSuccessor(0, action)
-
-    pos = n_state.getPacmanPosition()
-
-    if n_state.getNumFood() == 0: 
-        return 0, 0
-    else:
+    distance = distancer(state)
+    dx, dy = Actions.directionToVector(action)
+    pacman_pos_current= state.getPacmanPosition()
+    pos=(pacman_pos_current[0]+dx, pacman_pos_current[1]+dy)
+    num_food = state.getNumFood()
+    has_pill = 0
+    if num_food != 0: 
         next_min = 1000000
-        list_food = n_state.getFood()
-        for i, j in enumerate(list_food):
-            for ii, jj in enumerate(j):
-                dst = util.manhattanDistance(pos,(i,jj))
-                if (ii and dst) < next_min:
-                    next_min = dst
+        capsules=state.getFood().asList() 
+        for capsule in capsules:
 
-        return norm_dist(state,next_min), len(list_food)
+                dist = distance.getDistance(pos, capsule)
+                if dist < next_min and dist != 0:
+                    next_min = dist
+                if dist == 0:
+                    has_pill = 1
+        return norm_dist(state,next_min), num_food, has_pill
 def norm_dist(state:GameState,dist):
     size_map = state.getWalls().width * state.getWalls().height
     return dist/size_map
 def distToNextPowerPill(state:GameState, action):
-    n_state = state.generateSuccessor(0, action)
-
-    pos = n_state.getPacmanPosition()
-    min_pos = 1000000
-    power_pill = n_state.getCapsules()
-    if len(power_pill) < 1:
-        return 0,0
-    else:
-        for pill in power_pill:
-            dst = util.manhattanDistance(pos, pill)
-            if dst < min_pos:
-                min_pos = dst
-                #next_pos = pill
-        return min_pos,norm_dist(state,min_pos)
+    distance = distancer(state)
+    dx, dy = Actions.directionToVector(action)
+    pacman_pos= state.getPacmanPosition()
+    pos=(pacman_pos[0]+dx, pacman_pos[1]+dy)
+    has_pill = 0
+    next_min = 10000000
+    capsules=state.getCapsules()
+    for capsule in capsules:
+            dist = distance.getDistance(pos, capsule)
+            if dist < next_min and dist != 0:
+                next_min = dist
+            if dist == 0:
+                has_pill = 1
+    return norm_dist(state,next_min), has_pill
 
 def junction(state:GameState, action):
     n_state = state.generateSuccessor(0, action)
@@ -67,42 +71,55 @@ def junction(state:GameState, action):
         return distToNextJunction, ghostBeforeJunction
 
 def food_or_not(state:GameState, action):
+    distance = distancer(state)
 
-    n_state = state.generateSuccessor(0, action)
-
-    pos = n_state.getPacmanPosition()
+    pos = state.getPacmanPosition()
 
     food = []
     n_food = []
 
-    for ghost_state in n_state.getGhostStates():
+    for ghost_state in state.getGhostStates():
         position = ghost_state.getPosition()
         if ghost_state.scaredTimer > 0:
             food.append(position)
         else: 
             n_food.append(position)
             
-    food_X, food_Y = -1, -1
-    n_foodX, n_foodY = -1 , -1
     dist_food, dist_nfood = -1, -1
 
     if len(food) > 0:
         dsts=[]
         min_dist = 100000
-        for i in enumerate(food):
-            dist = util.manhattanDistance(pos, food[i])
+        for i in range(len(food)):
+            dist = distance.getDistance(pos, food[i])
             dsts.append(dist)
             if dist < min_dist:
                 dist_food = dist 
-                food_X, food_Y = food[i]
     if len(n_food) > 0:
         dsts=[]
         min_dist = 100000
-        for i in enumerate(n_food):
-            dist = util.manhattanDistance(pos, n_food[i])
+        for i in range(len(n_food)):
+            dist = distance.getDistance(pos, n_food[i])
             dsts.append(dist)
             if dist < min_dist:
                 dist_nfood = dist 
-                n_foodX, n_foodY = n_food[i]
     return len(food), norm_dist(state,dist_food), len(n_food), norm_dist(state,dist_nfood)
 
+
+def ghost_pos(state:GameState):
+
+    pos = state.getPacmanPosition()
+    pacman_pos= state.getPacmanPosition()
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
+    food = []
+    n_food = []
+    died = False
+    for ghost_state in state.getGhostStates():
+        position = ghost_state.getPosition()
+        if ghost_state.scaredTimer > 0:
+            food.append(position)
+        else: 
+            if position == pos:
+                died = True
+            n_food.append(position)
+    return died 

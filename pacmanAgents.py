@@ -118,7 +118,7 @@ class ReinforcementLearningAgent(game.Agent):
         #return np.inner(self.weights, self.feature_vector(state, action))
         q = 0
         for weight, feature in self.weights, self.feature_vector(state, action):
-            print(weight,feature)
+            #print(weight,feature)
             if weight == float("NAN") or feature == float("NAN"):
                 weight = 0
                 feature = 0
@@ -146,11 +146,12 @@ class ReinforcementLearningAgent(game.Agent):
         #print(Qvalues)
         try:
             best = random.choice(np.flatnonzero(Qvalues == np.max(Qvalues)))
+            
         except:
             best = random.choice(np.flatnonzero(Qvalues))
 
         bestAction = legal[best]
-
+        print('best ',bestAction)
         successor = state.generateSuccessor(0, bestAction)
         try: 
             Qmax = max([self.q_value(successor, move) for move in successor.getLegalPacmanActions()])

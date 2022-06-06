@@ -664,6 +664,10 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         print('Scores:       ', ', '.join([str(score) for score in scores]))
         print('Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate))
         print('Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins]))
+        with open(r'./scores.txt', 'w') as fp:
+            for item in scores:
+                fp.write("%s\n" % item)
+
 
     return games
 
