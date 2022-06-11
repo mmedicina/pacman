@@ -18,69 +18,39 @@ class RLAgent(game.Agent):
         self.numTraining= args.get('numTraining',0)
         #self.num_games = args.get('numGames',2)
         self.weights_register = []
-        self.discount = 0.9
-        self.epsilon = 0.4
-        self.learning_rate = 0.1
-        self.last_state, self.last_action = None, None
+        self.discount = 0.8
+        self.epsilon = 0.1
+        self.learning_rate = 0.00001
+        self.q = None
+        self.action = None
         self.score=0
-        self.weights={
-        'min_dist_power':0,
+        self.state=None
+        self.game_score=0
+        self.weights={'bias':0,'min_dist_pill': 0,'score':0}
+        '''    'min_dist_power':0,
         'has_power_pill':0,
         'has_pill':0,
         'num_pill':0,
-        'min_dist_pill': 0,
+        ,
         'num_ghosts':0,
         'edibleGhost':0,
         'dist_edibleGhost':0,
-        'dist_next_ghosts':0,
-        'bias':0
-        }
-
+        'dist_next_ghosts':0,'''
 
 
     def reward(self, state:GameState, next_state:GameState):
-        pos_next= next_state.getPacmanPosition()
-        pos =  state.getPacmanPosition()
-        features = self.get_features(self.last_state,self.last_action)
-        
-        if article.ghost_pos(next_state):
-            self.score = self.score - 200
-        '''if features['has_pill'] == 1:
-            self.score = self.score + 80'''
-        action_score = next_state.getScore() - state.getScore()
-        self.score= self.score + action_score
 
-        '''eaten = np.bitwise_xor(np.array(state.getFood().data), np.array(next_state.getFood().data)).any()    # Verifica se o pacman comeu
-        if eaten == True:
-            self.score = self.score + 100'''
-        #power = state.getCapsules() != next_state.getCapsules()    # Verifica se o pacman comeu uma power pill
-        if features['has_power_pill'] == 1:
-            self.score = self.score + 120
-        #score = next_state.getScore() - state.getScore()           # Leva em conta a mudança do score
+        if state.isWin() == False:
+            self.score = self.score - 1
+        #self.score = self.score + next_state.getScore() - state.getScore()
+
         score = self.score
         return score
-    def q_max(self, state:GameState, next_pos):
-        q_values = []
 
-        for pos in next_pos:
-            features=self.get_features(state, pos)
-            q_values.append(self.approximate_q(features))
-        if (len(q_values) == 0):
-            return 0
-        else:
-            return max(q_values)
-
-    def update_weights(self, next_state:GameState):
-        legal_next = next_state.getLegalPacmanActions()
-        if Directions.STOP in legal_next: legal_next.remove(Directions.STOP)
-        features = self.get_features(self.last_state, self.last_action)
-        Qvalues = self.approximate_q(features)      
-        Qvalues_next = self.q_max(next_state,legal_next)
-        r = self.reward(self.last_state, next_state)
+    def update_weights(self, features, Qvalues, Qvalues_next,r):
         for feature in features.keys():
             self.weights[feature] = self.weights[feature] + self.learning_rate*(r + self.discount*Qvalues_next - Qvalues)*features[feature]
-
-    def get_features(self, state:GameState, action):
+    def get_features(self, state:GameState):
         features={}
         '''
         'min_dist_power':0,
@@ -95,8 +65,12 @@ class RLAgent(game.Agent):
         'bias':0
         '''
         if state != None:
-            min_dis,num_pill,has_pill = article.distToNextPill(state, action)
-            features['has_pill']=has_pill
+            if state.isWin() == True:
+                min_dis=0
+            else:
+                min_dis,num_pill,has_pill = article.distToNextPill(state)
+            features['min_dist_pill']=min_dis
+            '''features['has_pill']=has_pill
             features['num_pill']=num_pill
             features['min_dist_pill']=min_dis
             min_dis,has_power= article.distToNextPowerPill(state,action)
@@ -106,8 +80,9 @@ class RLAgent(game.Agent):
             features['num_ghosts']=n_food
             features['dist_next_ghosts']=dist_nfood
             features['edibleGhost']=food
-            features['dist_edibleGhost']=dist_food
+            features['dist_edibleGhost']=dist_food  '''
             features['bias'] = 1
+            features['score'] = state.getScore() - self.game_score
         return features
     
     def approximate_q(self,features):
@@ -126,24 +101,30 @@ class RLAgent(game.Agent):
         else:
             Qvalues = []
             for action in legal:
-                features=self.get_features(state,action)
+                features=self.get_features(state.generateSuccessor(0, action))
                 Qvalues.append(self.approximate_q(features))
             Qvalues = np.array(Qvalues)
             best=np.argmax(Qvalues)
             bestAction = legal[best]
             successor = state.generateSuccessor(0, bestAction)
-            self.last_action = bestAction
-            self.last_state = state
-            features = self.get_features(self.last_state,self.last_action)
-            #self.update_weights(successor)
+            q_current=self.approximate_q(features)
+            q_next=max(Qvalues)
+            features = self.get_features(state)
+            self.score = self.reward(state, successor)
+            self.update_weights(features,q_current,q_next,self.score)
+            self.q = q_next
+            self.game_score = state.getScore()
+            self.action = bestAction
+            self.state = successor
             return bestAction
     def final(self, state:GameState):
-        self.update_weights(state)
+        if state.isWin() == True:
+            self.score = self.score + 40
+        else: 
+            self.score = self.score - 20
+        features = self.get_features(self.state)
+        self.update_weights(features,self.q,0,self.score)
         game_weights.append(list(self.weights.values()))
-        #df = pd.DataFrame(game_weights)
-        #df.columns=self.weights.keys()
-        #df.to_csv('scores.csv')
-        #self.num_games = self.num_games + 1
         with open(r'./pesos.txt', 'w') as fp:
             for item in game_weights:
                 fp.write("%s\n" % item)

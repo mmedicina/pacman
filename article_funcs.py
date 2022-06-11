@@ -5,12 +5,12 @@ def distancer(state:GameState):
     distance_calculator = Distancer(state.data.layout)
     distance_calculator.getMazeDistances()
     return distance_calculator
-def distToNextPill(state:GameState, action):
+def distToNextPill(state:GameState):
     distance = distancer(state)
-    dx, dy = Actions.directionToVector(action)
-    pacman_pos_current= state.getPacmanPosition()
-    pos=(pacman_pos_current[0]+dx, pacman_pos_current[1]+dy)
+    pacman_pos= state.getPacmanPosition()
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
     num_food = state.getNumFood()
+
     has_pill = 0
     if num_food != 0: 
         next_min = 1000000
@@ -26,11 +26,10 @@ def distToNextPill(state:GameState, action):
 def norm_dist(state:GameState,dist):
     size_map = state.getWalls().width * state.getWalls().height
     return dist/size_map
-def distToNextPowerPill(state:GameState, action):
+def distToNextPowerPill(state:GameState):
     distance = distancer(state)
-    dx, dy = Actions.directionToVector(action)
     pacman_pos= state.getPacmanPosition()
-    pos=(pacman_pos[0]+dx, pacman_pos[1]+dy)
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
     has_pill = 0
     next_min = 10000000
     capsules=state.getCapsules()
@@ -70,10 +69,10 @@ def junction(state:GameState, action):
             n_food.append(position)
         return distToNextJunction, ghostBeforeJunction
 
-def food_or_not(state:GameState, action):
+def food_or_not(state:GameState):
     distance = distancer(state)
-
-    pos = state.getPacmanPosition()
+    pacman_pos= state.getPacmanPosition()
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
 
     food = []
     n_food = []
