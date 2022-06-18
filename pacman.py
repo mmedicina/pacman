@@ -39,6 +39,7 @@ code to run a game.  This file is divided into three sections:
 To play your first game, type 'python pacman.py' from the command line.
 The keys are 'a', 's', 'd', and 'w' to move (or arrow keys).  Have fun!
 """
+# from RLAgents import RLAgent
 from game import GameStateData
 from game import Game
 from game import Directions
@@ -72,12 +73,12 @@ class GameState:
     ####################################################
 
     # static variable keeps track of which states have had getLegalActions called
-    explored = set()
-    def getAndResetExplored():
-        tmp = GameState.explored.copy()
-        GameState.explored = set()
-        return tmp
-    getAndResetExplored = staticmethod(getAndResetExplored)
+    # explored = set()
+    # def getAndResetExplored():
+    #     tmp = GameState.explored.copy()
+    #     GameState.explored = set()
+    #     return tmp
+    # getAndResetExplored = staticmethod(getAndResetExplored)
 
     def getLegalActions( self, agentIndex=0 ):
         """
@@ -120,8 +121,8 @@ class GameState:
         # Book keeping
         state.data._agentMoved = agentIndex
         state.data.score += state.data.scoreChange
-        GameState.explored.add(self)
-        GameState.explored.add(state)
+        # GameState.explored.add(self)
+        # GameState.explored.add(state)
         return state
 
     def getLegalPacmanActions( self ):
@@ -507,8 +508,8 @@ def readCommand( argv ):
                       help=default('The maximum number of ghosts to use'), default=4)
     parser.add_option('-z', '--zoom', type='float', dest='zoom',
                       help=default('Zoom the size of the graphics window'), default=1.0)
-    parser.add_option('-f', '--fixRandomSeed', action='store_true', dest='fixRandomSeed',
-                      help='Fixes the random seed to always play the same game', default=False)
+    parser.add_option('-f', '--fixRandomSeed', type='int', dest='fixRandomSeed',
+                      help='Fixes the random seed to always play the same game', default=0)
     parser.add_option('-r', '--recordActions', action='store_true', dest='record',
                       help='Writes game histories to a file (named by the time they were played)', default=False)
     parser.add_option('--replay', dest='gameToReplay',
@@ -530,7 +531,7 @@ def readCommand( argv ):
     args = dict()
 
     # Fix the random seed
-    if options.fixRandomSeed: random.seed('cs188')
+    if options.fixRandomSeed != 0: random.seed(options.fixRandomSeed)
 
     # Choose a layout
     args['layout'] = layout.getLayout( options.layout )
@@ -634,6 +635,12 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
     rules = ClassicGameRules(timeout)
     games = []
 
+    # from pympler import tracker, asizeof, classtracker
+
+    # tr = tracker.SummaryTracker()
+    # ctr = classtracker.ClassTracker()
+    # ctr.track_object(pacman)
+
     for i in range( numGames ):
         beQuiet = i < numTraining
         if beQuiet:
@@ -647,7 +654,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
         game.run()
         if not beQuiet: games.append(game)
-
+        
         if record:
             import time, pickle
             fname = ('recorded-game-%d' % (i + 1)) +  '-'.join([str(t) for t in time.localtime()[1:6]])
@@ -664,9 +671,9 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
         #print('Scores:       ', ', '.join([str(score) for score in scores]))
         print('Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate))
         #print('Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins]))
-        with open(r'./scores.txt', 'w') as fp:
+        '''with open(r'./scores.txt', 'w') as fp:
             for item in scores:
-                fp.write("%s\n" % item)
+                fp.write("%s\n" % item)'''
 
 
     return games

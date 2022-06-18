@@ -8,7 +8,8 @@
             "name": "Python: Arquivo Atual",
             "type": "python",
             "request": "launch",
-            "program": "pacman.py --layout smallClassic --pacman RLAgent -n 60",
+            "program": "pacman.py",
+            "args": ["--layout", "smallClassic", "--pacman", "RLAgent", "-n", "60", "-q", "-x", "10000", "-n", "11000"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

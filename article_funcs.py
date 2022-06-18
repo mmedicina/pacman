@@ -10,7 +10,6 @@ def distToNextPill(state:GameState):
     pacman_pos= state.getPacmanPosition()
     pos=(float(pacman_pos[0]), float(pacman_pos[1]))
     num_food = state.getNumFood()
-
     has_pill = 0
     if num_food != 0: 
         next_min = 1000000
@@ -41,32 +40,17 @@ def distToNextPowerPill(state:GameState):
                 has_pill = 1
     return norm_dist(state,next_min), has_pill
 
-def junction(state:GameState, action):
-    n_state = state.generateSuccessor(0, action)
-
-    x, y = n_state.getPacmanPosition()
-    coord_x, coord_y = dir
-    distToNextJunction = 1  
-    if (coord_x == 0 and coord_y == 0): 
-        return -1, False 
-    ghostBeforeJunction = False
+def junction(state:GameState):
+    pacman_pos= state.getPacmanPosition()
+    ghostBeforeJunction = 0
     ghost = [util.nearestPoint(pos) for pos in state.getGhostPositions()]
     while True:
-        state.hasWall(x + distToNextJunction * coord_x, y + distToNextJunction * coord_y)
+        state.hasWall(float(pacman_pos[0]) + 1.0, float(pacman_pos[1])+2.0)
         if (x + distToNextJunction * coord_x, y + distToNextJunction * coord_y) in ghost: 
             ghostBeforeJunction = True
         distToNextJunction = distToNextJunction + 1
         if (ghostBeforeJunction) == True:
             break 
-    food = []
-    n_food = []
-
-    for ghost_state in state.getGhostStates():
-        position = ghost_state.getPosition()
-        if ghost_state.scaredTimer > 0:
-            food.append(position)
-        else: 
-            n_food.append(position)
         return distToNextJunction, ghostBeforeJunction
 
 def food_or_not(state:GameState):
@@ -122,3 +106,51 @@ def ghost_pos(state:GameState):
                 died = True
             n_food.append(position)
     return died 
+
+
+def one_two_steps(state:GameState):
+    distance = distancer(state)
+    pacman_pos= state.getPacmanPosition()
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
+    n_food = []
+    for ghost_state in state.getGhostStates():
+        position = ghost_state.getPosition()
+        if ghost_state.scaredTimer <= 0:
+            n_food.append(position)            
+    one_step, two_step = 0, 0
+    if len(n_food) > 0:
+        dsts=[]
+        for i in range(len(n_food)):
+            dist = distance.getDistance(pos, n_food[i])
+            dsts.append(dist)
+            if dist ==1:
+                one_step+=1
+            if dist == 2:
+                two_step+=1
+        #print(min(dsts))
+        
+    else:
+        return one_step, two_step,-1
+
+    return one_step, two_step, norm_dist(state,min(dsts))
+
+def scared_steps(state:GameState):
+    distance = distancer(state)
+    pacman_pos= state.getPacmanPosition()
+    pos=(float(pacman_pos[0]), float(pacman_pos[1]))
+    food = []
+    for ghost_state in state.getGhostStates():
+        position = ghost_state.getPosition()
+        if ghost_state.scaredTimer > 0:
+            food.append(position)            
+    one_step, two_step = 0, 0
+    if len(food) > 0:
+        dsts=[]
+        for i in range(len(food)):
+            dist = distance.getDistance(pos, food[i])
+            dsts.append(dist)
+            if dist ==1:
+                one_step+=1
+            if dist == 2:
+                two_step+=1
+    return one_step, two_step
