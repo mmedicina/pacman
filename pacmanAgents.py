@@ -12,6 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+from math import nan
 from pacman import Directions, GameState
 import random
 import game
@@ -56,30 +57,84 @@ def scoreEvaluation(state:GameState, action):
 import article_funcs as af
 class ReinforcementLearningAgent(game.Agent):
 
-    def __new__(cls, discount = 0.1, learning_rate=0.001):
+    def __init__(self, **args):
+        super()
+        #object = super(ReinforcementLearningAgent, cls,**args).__new__(cls)
+        self.numTraining= args.get('numTraining',0)
+        self.discount = 0.9
+        self.learning_rate = 0.1
+        self.features = (scoreEvaluation,)
+        '''object.weights={
+            'has_scared_ghost':0,
+            'number_scared_ghost': 0,
+            'min_dist_scare_ghost':0,
+            'power_pill':0,
+            'has_power_pill':0,
+            'has_pill':0,
+            'min_dist_pill': 0,
+            'num_ghosts':0,
+            'dist_next_ghosts':0,
+            'has_food':0,
+            'min_dist_food': 0,
+        }'''
+        self.weights = np.random.rand(1 + len(self.features))
 
-        object = super(ReinforcementLearningAgent, cls).__new__(cls)
-        object.discount = discount
-        object.learning_rate = learning_rate
-        object.features = (scoreEvaluation,)
-        object.weights = np.random.rand(1 + len(object.features))
-
-        return object
-
+        #return object
+    '''
+    def get_features(self, state:GameState, action):
+        min_dis,has_pill = article.distToNextPill(state, action)
+        object.weights['has_pill']=has_pill
+        object.weights['min_dist_food']=min_dis
+        min_dis,has_power= article.distToNextPowerPill(state,action)
+        object.weights['has_power_pill']=has_power
+        object.weights['power_pill']=min_dis
+        food, dist_food, n_food, dist_nfood=article.food_or_not(state, action)
+        object.weights['num_ghosts']=n_food
+        object.weights['dist_next_ghosts']=dist_nfood
+        object.weights['has_food']=food
+        object.weights['min_dist_food']=dist_food
+    '''
     def reward(self, state:GameState, next_state:GameState):
+        pacman_pos_next= next_state.getPacmanPosition()
+        pacman_pos_current=  state.getPacmanPosition()
         eaten = np.bitwise_xor(np.array(state.getFood().data), np.array(next_state.getFood().data)).any()    # Verifica se o pacman comeu
         power = state.getCapsules() != next_state.getCapsules()    # Verifica se o pacman comeu uma power pill
         score = next_state.getScore() - state.getScore()           # Leva em conta a mudança do score
         freedom = len(next_state.getLegalPacmanActions()) - len(state.getLegalPacmanActions())    # Incentiva ir para lugares mais livres
+        #_, pill =article.distToNextPill(state, state.getLegalPacmanActions())
+        #if(pill!=0)
+        change_pos = 1
+        if pacman_pos_current == pacman_pos_next:
+            change_pos= -0.5*freedom
 
-        return 0.1*eaten + power + 0.5*freedom
+        #print(eaten,power,change_pos,freedom)
+        return 0.3*eaten + 0.2*power + change_pos + 0.2*freedom
 
     def feature_vector(self, state, action):
         return np.array([1] + [feature(state, action ) for feature in self.features])
 
     def q_value(self, state, action):
-        return np.inner(self.weights, self.feature_vector(state, action))
-
+        #return np.inner(self.weights, self.feature_vector(state, action))
+        q = 0
+        for weight, feature in self.weights, self.feature_vector(state, action):
+            #print(weight,feature)
+            if weight == float("NAN") or feature == float("NAN"):
+                weight = 0
+                feature = 0
+            q = q + weight*feature 
+            if q==-float('inf'):
+                q = 0
+            #print(q)
+        return q
+    '''def update(self, state, next_state, action):
+            legal = state.getLegalPacmanActions()
+            q = [self.q_value(state, action) for action in legal]
+            next_action, next_max_q, next_features = self.chooseActionGreedy(next_state)
+            reward=self.reward(state, next_state, current_features)
+            self.acumulate_reward_episode=self.acumulate_reward_episode + reward_action
+            for feature_name, value_feature in current_features.items():
+                self.weights[feature_name] = self.weights[feature_name]  + self.alpha * ((reward_action + (self.discount * next_max_q) - current_q) * value_feature)
+    '''
     def getAction(self, state:GameState):
 
         legal = state.getLegalPacmanActions()
@@ -87,17 +142,23 @@ class ReinforcementLearningAgent(game.Agent):
         if Directions.STOP in legal: legal.remove(Directions.STOP)
 
         Qvalues = [self.q_value(state, action) for action in legal]
-
-        best = random.choice(np.flatnonzero(Qvalues == np.max(Qvalues)))
+        #print(Qvalues)
+        try:
+            best = random.choice(np.flatnonzero(Qvalues == np.max(Qvalues)))
+            
+        except:
+            best = random.choice(np.flatnonzero(Qvalues))
 
         bestAction = legal[best]
-
+        print('best ',bestAction)
         successor = state.generateSuccessor(0, bestAction)
+        try: 
+            Qmax = max([self.q_value(successor, move) for move in successor.getLegalPacmanActions()])
+        except:
+            Qmax = 0
 
-        Qmax = max([self.q_value(successor, move) for move in successor.getLegalPacmanActions()])
+        self.weights += self.learning_rate * (self.reward(state, successor) + self.discount * Qmax - Qvalues[best]) * self.feature_vector(state, bestAction)
 
-        #self.weights += self.learning_rate * (self.reward(state, successor) + self.discount * Qmax - Qvalues[best]) * self.feature_vector(state, bestAction)
-
-        print(self.feature_vector(state, bestAction))
+        #print(self.feature_vector(state, bestAction))
 
         return bestAction
