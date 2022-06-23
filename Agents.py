@@ -42,40 +42,6 @@ def nearestFood(state:GameState):
     
     return 1
 
-def nearestGhost(state:GameState):
-    pos = state.getPacmanPosition()
-    node = (pos[0], pos[1])
-
-    explored = []
-    exploring = [node]
-    distances = [0]
-
-    while exploring:
-        current = exploring.pop(0)
-        d = distances.pop(0)
-
-        for ghost in state.getGhostPositions():
-            if current == ghost: return d
-
-        explored.append(current)
-        
-        for new in [
-            (current[0], current[1]+1),
-            (current[0]+1, current[1]),
-            (current[0], current[1]-1),
-            (current[0]-1, current[1])
-        ]:
-            if new[0] >= state.getWalls().width or new[0]<0 or new[1] < 0 or new[1] >= state.getWalls().height:
-                continue
-
-
-            if state.hasWall(new[0], new[1]) or new in explored: continue
-
-            exploring.append(new)
-            distances.append(d+1)
-    
-    return 1
-
 def getDistance(state:GameState, pos, target):
     explored = []
     exploring = [pos]
@@ -106,15 +72,43 @@ def getDistance(state:GameState, pos, target):
     
     return 1
 
-def numGhostsNsteps(state:GameState, steps):
-    counter = 0
-
+def numGhosts1n2steps(state:GameState):
     pos = state.getPacmanPosition()
-    for ghost in state.getGhostPositions():
-        if getDistance(state, pos, ghost) == steps:
-            counter += 1
+    node = (pos[0], pos[1])
 
-    return counter
+    explored = []
+    exploring = [node]
+    distances = [0]
+    found = [0, 0]
+
+    while exploring:
+        current = exploring.pop(0)
+        d = distances.pop(0)
+
+        if d >= 3: break
+
+        for ghost in state.getGhostStates():
+            if ghost.scaredTimer > 0: continue
+            if current == ghost.getPosition(): found[d-1] += 1
+
+        explored.append(current)
+        
+        for new in [
+            (current[0], current[1]+1),
+            (current[0]+1, current[1]),
+            (current[0], current[1]-1),
+            (current[0]-1, current[1])
+        ]:
+            if new[0] >= state.getWalls().width or new[0]<0 or new[1] < 0 or new[1] >= state.getWalls().height:
+                continue
+
+
+            if state.hasWall(new[0], new[1]) or new in explored: continue
+
+            exploring.append(new)
+            distances.append(d+1)
+
+    return found
 
 def getFeatures(state:GameState, action:Directions):
     features = [1,]
@@ -122,10 +116,13 @@ def getFeatures(state:GameState, action:Directions):
 
     features.append(1/nearestFood(nextState))
     features.append(state.getNumFood() - nextState.getNumFood())
-    features.append(1/(1 + numGhostsNsteps(nextState, 1)))
-    features.append(1/(1 + numGhostsNsteps(nextState, 2)))
+
+    numGhosts1step, numGhost2step = numGhosts1n2steps(nextState)
+
+    features.append(1 - numGhosts1step)
+    features.append(1 - numGhost2step)
     features.append((nextState.getScore() - state.getScore()+500)/500)
-    # features.append(nearestGhost(nextState))
+    #features.append(nearestGhost(nextState))
 
     return np.array(features)
 
