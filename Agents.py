@@ -205,3 +205,31 @@ class RLAgent():
         pass
         self.weights = self._weights
         np.savetxt("weights.txt", self.weights)
+
+class TestAgent:
+    def __init__(self, *args, **kwargs):
+        self.weights = getWeights()
+
+    def Q(self, state:GameState, action:Directions):
+        return np.inner(getFeatures(state, action), self.weights)
+
+    def Qstar(self, state:GameState):
+        legal = state.getLegalPacmanActions()
+        if Directions.STOP in legal: legal.remove(Directions.STOP)
+
+        if len(legal) == 0: return (0, Directions.STOP)
+
+        best = (-np.inf, None)
+        for action in legal:
+            q = self.Q(state, action)
+            if q >= best[0]: best = (q, action)
+
+        return best
+
+    def getAction(self, state:GameState):
+        legal = state.getLegalPacmanActions()
+        if Directions.STOP in legal: legal.remove(Directions.STOP)
+    
+        q, action = self.Qstar(state)
+
+        return action
