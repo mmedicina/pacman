@@ -2,129 +2,21 @@ from pacman import GameState, Directions
 import random
 import numpy as np
 from time import sleep
+from features import getFeatures
 
 def getWeights():
     try:
         return np.loadtxt("weights.txt", dtype=np.float64)
     except OSError:
-        return np.zeros(6)
+        return np.zeros(8)
 
-def nearestFood(state:GameState):
-    pos = state.getPacmanPosition()
-    node = (pos[0], pos[1])
+def printFeatures(state, action):
+    features = getFeatures(state, action)
 
-    explored = []
-    exploring = [node]
-    distances = [0]
+    for feature in features:
+        print(" %.2f " % feature, end='')
 
-    while exploring:
-        current = exploring.pop(0)
-        d = distances.pop(0)
-
-        if state.hasFood(current[0], current[1]): return d
-
-        explored.append(current)
-        
-        for new in [
-            (current[0], current[1]+1),
-            (current[0]+1, current[1]),
-            (current[0], current[1]-1),
-            (current[0]-1, current[1])
-        ]:
-            if new[0] >= state.getWalls().width or new[0]<0 or new[1] < 0 or new[1] >= state.getWalls().height:
-                continue
-
-
-            if state.hasWall(new[0], new[1]) or new in explored: continue
-
-            exploring.append(new)
-            distances.append(d+1)
-    
-    return 1
-
-def getDistance(state:GameState, pos, target):
-    explored = []
-    exploring = [pos]
-    distances = [0]
-
-    while exploring:
-        current = exploring.pop(0)
-        d = distances.pop(0)
-
-        if current == target: return d
-
-        explored.append(current)
-        
-        for new in [
-            (current[0], current[1]+1),
-            (current[0]+1, current[1]),
-            (current[0], current[1]-1),
-            (current[0]-1, current[1])
-        ]:
-            if new[0] >= state.getWalls().width or new[0]<0 or new[1] < 0 or new[1] >= state.getWalls().height:
-                continue
-
-
-            if state.hasWall(new[0], new[1]) or new in explored: continue
-
-            exploring.append(new)
-            distances.append(d+1)
-    
-    return 1
-
-def numGhosts1n2steps(state:GameState):
-    pos = state.getPacmanPosition()
-    node = (pos[0], pos[1])
-
-    explored = []
-    exploring = [node]
-    distances = [0]
-    found = [0, 0]
-
-    while exploring:
-        current = exploring.pop(0)
-        d = distances.pop(0)
-
-        if d >= 3: break
-
-        for ghost in state.getGhostStates():
-            if ghost.scaredTimer > 0: continue
-            if current == ghost.getPosition(): found[d-1] += 1
-
-        explored.append(current)
-        
-        for new in [
-            (current[0], current[1]+1),
-            (current[0]+1, current[1]),
-            (current[0], current[1]-1),
-            (current[0]-1, current[1])
-        ]:
-            if new[0] >= state.getWalls().width or new[0]<0 or new[1] < 0 or new[1] >= state.getWalls().height:
-                continue
-
-
-            if state.hasWall(new[0], new[1]) or new in explored: continue
-
-            exploring.append(new)
-            distances.append(d+1)
-
-    return found
-
-def getFeatures(state:GameState, action:Directions):
-    features = [1,]
-    nextState = state.generateSuccessor(0, action)
-
-    features.append(1/nearestFood(nextState))
-    features.append(state.getNumFood() - nextState.getNumFood())
-
-    numGhosts1step, numGhost2step = numGhosts1n2steps(nextState)
-
-    features.append(1 - numGhosts1step)
-    features.append(1 - numGhost2step)
-    features.append((nextState.getScore() - state.getScore()+500)/500)
-    #features.append(nearestGhost(nextState))
-
-    return np.array(features)
+    print()
 
 class RLAgent():
     def __init__(self, **args):
@@ -146,7 +38,7 @@ class RLAgent():
         nextState = state.generateSuccessor(0, action)
 
         score += nextState.getScore() - state.getScore()
-    
+      
         return score
 
     def Qstar(self, state:GameState):
@@ -171,7 +63,8 @@ class RLAgent():
         best = (-np.inf, None)
         for action in legal:
             q = self._Q(state, action)
-            #print(action, getFeatures(state, action))
+            #print(action, end='')
+            #printFeatures(state, action)
             if q >= best[0]: best = (q, action)
 
         #print()
@@ -192,9 +85,13 @@ class RLAgent():
         self.epsilon *= self.discount
 
         if random.random() < self.epsilon: return random.choice(legal)
-    
+
         q, action = self._Qstar(state)
         self._update(state, action)
+
+        #print(state.getGhostPositions())
+        #print(predictPositions(state))
+        #sleep(0.3)
 
         return action
 

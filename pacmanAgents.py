@@ -12,7 +12,6 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
-from math import nan
 from pacman import Directions, GameState
 import random
 import game
@@ -53,8 +52,6 @@ class GreedyAgent(game.Agent):
 def scoreEvaluation(state:GameState, action):
     return state.generateSuccessor(0, action).getScore()
 
-
-import article_funcs as af
 class ReinforcementLearningAgent(game.Agent):
 
     def __init__(self, **args):
